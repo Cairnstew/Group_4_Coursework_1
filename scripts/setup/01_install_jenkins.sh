@@ -66,6 +66,28 @@ info "Starting Jenkins service..."
 systemctl start jenkins
 systemctl enable jenkins
 
+# ── 4b. Pre-set admin credentials ─────────────────────────────────────────────
+info "Setting default admin credentials..."
+mkdir -p /var/lib/jenkins/init.groovy.d
+
+cat > /var/lib/jenkins/init.groovy.d/basic-security.groovy <<'EOF'
+import jenkins.model.*
+import hudson.security.*
+
+def instance = Jenkins.getInstance()
+def hudsonRealm = new HudsonPrivateSecurityRealm(false)
+hudsonRealm.createAccount("admin", "admin")
+instance.setSecurityRealm(hudsonRealm)
+
+def strategy = new FullControlOnceLoggedInAuthorizationStrategy()
+strategy.setAllowAnonymousRead(false)
+instance.setAuthorizationStrategy(strategy)
+instance.save()
+EOF
+
+chown -R jenkins:jenkins /var/lib/jenkins/init.groovy.d
+systemctl restart jenkins
+
 # ── 5. Status check ────────────────────────────────────────────────────────────
 if systemctl is-active --quiet jenkins; then
   info "Jenkins is running ✔"
