@@ -19,4 +19,16 @@ echo "===== STEP 5: Configure SonarQube ====="
 echo "===== STEP 6: Configure Jenkins ====="
 ./06_configure_jenkins.sh
 
+PUBLIC_IP=$(curl -sf http://checkip.amazonaws.com || echo "localhost")
+
+echo ""
+echo "======================================================"
+echo "✅ ALL SETUP COMPLETE"
+echo ""
+echo "SonarQube: http://${PUBLIC_IP}:9000"
+echo "Jenkins:   http://${PUBLIC_IP}:8080"
+echo ""
+echo "Default SonarQube credentials: admin / admin"
+echo "======================================================"
+
 echo "===== ALL DONE ====="
