@@ -115,7 +115,7 @@ Group members: Clone this repository (https://github.com/Cairnstew/Group_4_Cours
    - New Item > Freestyle project > Name: "Dec2Hex-CI".
    - Source Code Management: Git > Repository URL: https://github.com/Cairnstew/Group_4_Coursework_1.git.
    - Credentials: Add GitHub Personal Access Token (repo scope, 7-day expiration).
-   - Build Triggers: Poll SCM (e.g., `* * * * *` for every minute).
+   - Build Triggers: Poll SCM (e.g., `H/5 * * * *` for every 5 minutes).
    - Build Steps: Execute Shell:
      ```
      python3 Dec2Hex.py 15  # Example input
