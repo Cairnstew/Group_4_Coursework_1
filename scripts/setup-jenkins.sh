@@ -27,7 +27,7 @@ if java -version &>/dev/null; then
 else
   info "Installing Java 17 and dependencies..."
   apt-get update -qq
-  apt-get install -y fontconfig openjdk-21-jre
+  apt-get install -y fontconfig openjdk-21-jre python3
   info "Java installed: $(java -version 2>&1 | head -1)"
 fi
 
