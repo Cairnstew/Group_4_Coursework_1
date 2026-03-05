@@ -2,7 +2,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ENV_FILE="${SCRIPT_DIR}/.env"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+ENV_FILE="${REPO_ROOT}/.env"
 
 if [ -f "${ENV_FILE}" ]; then
   set -o allexport
@@ -31,8 +32,6 @@ echo "$SONAR_TOKEN" > /tmp/sonar_token.txt
 
 echo "==> Creating webhook..."
 PUBLIC_IP=$(curl -sf --max-time 5 http://checkip.amazonaws.com 2>/dev/null || echo "localhost")
-JENKINS_PORT="${JENKINS_URL:-http://localhost:8080}"
-JENKINS_PORT="${JENKINS_PORT##*:}"
 
 curl -sf -u "${SONAR_USER}:${SONAR_PASS}" \
   -X POST "${SONAR_URL}/api/webhooks/create" \
