@@ -1,6 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
+chmod +x *.sh
+
 echo "===== STEP 1: Install Jenkins ====="
 ./01_install_jenkins.sh
 
