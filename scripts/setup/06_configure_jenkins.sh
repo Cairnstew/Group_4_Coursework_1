@@ -66,19 +66,8 @@ if [ "$PLUGIN_EXIT" -ne 0 ]; then
 fi
 echo "==> Plugin installation complete."
 
-# ── Write sonar-project.properties ────────────────────────────────────────────
-echo "==> Writing sonar-project.properties..."
-REPO_DIR="/var/lib/jenkins/workspace/${JOB_NAME}"
-mkdir -p "${REPO_DIR}"
-cat > "${REPO_DIR}/sonar-project.properties" <<EOF
-sonar.projectKey=${SONAR_PROJECT_KEY}
-sonar.projectName=${SONAR_PROJECT_NAME}
-sonar.sources=.
-sonar.language=py
-sonar.host.url=${SONAR_URL}
-sonar.token=${SONAR_TOKEN}
-EOF
-chown -R jenkins:jenkins "${REPO_DIR}" 2>/dev/null || true
+# ── sonar-project.properties is written by the Jenkins build step itself ──────
+echo "==> sonar-project.properties will be written by the Jenkins build step."
 
 echo ""
 echo "======================================================"
