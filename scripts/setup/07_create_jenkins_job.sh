@@ -35,35 +35,20 @@ if [ ! -f /tmp/sonar_token.txt ]; then
 fi
 SONAR_TOKEN=$(cat /tmp/sonar_token.txt)
 PUBLIC_IP=$(curl -sf --max-time 5 http://checkip.amazonaws.com 2>/dev/null || echo "localhost")
-BRANCH="${GITHUB_BRANCH:-*/main}"
-SONAR_PROJECT_KEY="${SONAR_PROJECT_KEY:-group4-dec2hex}"
-SONAR_PROJECT_NAME="${SONAR_PROJECT_NAME:-Group4 Dec2Hex}"
-SCANNER_BIN="/var/lib/jenkins/sonarqube/sonar-scanner-3.3.0.1492-linux/bin/sonar-scanner"
+BRANCH="${GITHUB_BRANCH:-main}"
 
-# ── Debug: print resolved config ──────────────────────────────────────────────
+# ── Print resolved config ─────────────────────────────────────────────────────
 echo ""
 echo "==> Config:"
-echo "    JENKINS_URL:        ${JENKINS_URL}"
-echo "    SONAR_URL:          ${SONAR_URL}"
-echo "    GITHUB_REPO:        ${GITHUB_REPO}"
-echo "    BRANCH:             ${BRANCH}"
-echo "    JOB_NAME:           ${JOB_NAME}"
-echo "    SONAR_PROJECT_KEY:  ${SONAR_PROJECT_KEY}"
-echo "    SONAR_TOKEN:        ${SONAR_TOKEN:0:8}... (truncated)"
-echo "    SCANNER_BIN:        ${SCANNER_BIN}"
+echo "    JENKINS_URL:  ${JENKINS_URL}"
+echo "    SONAR_URL:    ${SONAR_URL}"
+echo "    GITHUB_REPO:  ${GITHUB_REPO}"
+echo "    BRANCH:       ${BRANCH}"
+echo "    JOB_NAME:     ${JOB_NAME}"
+echo "    SONAR_TOKEN:  ${SONAR_TOKEN:0:8}... (truncated)"
 echo ""
 
-# ── Debug: verify sonar-scanner exists ────────────────────────────────────────
-echo "==> Checking sonar-scanner binary..."
-if [ -f "${SCANNER_BIN}" ]; then
-  echo "    Found: ${SCANNER_BIN}"
-else
-  echo "    WARNING: sonar-scanner not found at ${SCANNER_BIN}"
-  echo "    Searching for it..."
-  find /var/lib/jenkins -name "sonar-scanner" -type f 2>/dev/null || echo "    Not found anywhere under /var/lib/jenkins"
-fi
-
-# ── Debug: verify SonarQube is reachable ──────────────────────────────────────
+# ── Verify SonarQube is reachable ─────────────────────────────────────────────
 echo "==> Checking SonarQube is reachable..."
 SONAR_STATUS=$(curl -sf --max-time 10 "${SONAR_URL}/api/system/status" 2>/dev/null || echo "UNREACHABLE")
 echo "    SonarQube status: ${SONAR_STATUS}"
@@ -104,14 +89,16 @@ if [ ! -f /tmp/jenkins-cli.jar ]; then
     --output /tmp/jenkins-cli.jar
 fi
 
-# ── Ensure SonarQube plugin is installed ─────────────────────────────────────
-echo "==> Ensuring SonarQube plugin is installed..."
+# ── Install required plugins ──────────────────────────────────────────────────
+echo "==> Installing required plugins (Pipeline, Git, SonarQube)..."
 set +e
+cli install-plugin workflow-aggregator -deploy 2>/dev/null
+cli install-plugin git -deploy 2>/dev/null
 cli install-plugin sonar -deploy 2>/dev/null
 set -e
-echo "==> SonarQube plugin ready."
+echo "==> Plugins ready."
 
-# ── 1. Add GitHub credentials ────────────────────────────────────────────────
+# ── 1. Add GitHub credentials ─────────────────────────────────────────────────
 echo "==> Adding GitHub credentials to Jenkins..."
 fetch_crumb
 
@@ -134,7 +121,7 @@ CRED_RESULT=$(curl -s -o /dev/null -w "%{http_code}" \
   }")
 echo "==> GitHub credentials HTTP response: ${CRED_RESULT}"
 
-# ── 2. Add SonarQube token credential ────────────────────────────────────────
+# ── 2. Add SonarQube token credential ─────────────────────────────────────────
 echo "==> Adding SonarQube token credential to Jenkins..."
 fetch_crumb
 
@@ -156,8 +143,10 @@ SONAR_CRED_RESULT=$(curl -s -o /dev/null -w "%{http_code}" \
   }")
 echo "==> SonarQube credential HTTP response: ${SONAR_CRED_RESULT}"
 
-# ── 3. Create job ─────────────────────────────────────────────────────────────
-echo "==> Creating Jenkins job: ${JOB_NAME}..."
+# ── 3. Create Pipeline job ─────────────────────────────────────────────────────
+# The job XML is minimal — it just points Jenkins at the repo and Jenkinsfile.
+# All build logic lives in the Jenkinsfile committed to the repository.
+echo "==> Creating Jenkins Pipeline job: ${JOB_NAME}..."
 
 set +e
 cli get-job "${JOB_NAME}" > /dev/null 2>&1
@@ -168,114 +157,63 @@ if [ "$JOB_EXISTS" -eq 0 ]; then
   cli delete-job "${JOB_NAME}"
 fi
 
-cat > /tmp/job-config.xml <<XML
-<?xml version='1.1' encoding='UTF-8'?>
-<project>
-  <description>CI pipeline for Dec2Hex Python project — GCU SE &amp; DevOps CW1</description>
+# Use Python to write the XML — avoids all shell heredoc / escaping issues
+python3 - <<PYEOF
+import os
+
+repo   = os.environ['GITHUB_REPO']
+branch = os.environ.get('GITHUB_BRANCH', 'main')
+
+xml = """<?xml version='1.1' encoding='UTF-8'?>
+<flow-definition plugin="workflow-job">
+  <description>CI pipeline for Dec2Hex - GCU SE and DevOps CW1</description>
   <keepDependencies>false</keepDependencies>
   <properties/>
-
-  <scm class="hudson.plugins.git.GitSCM" plugin="git">
-    <configVersion>2</configVersion>
-    <userRemoteConfigs>
-      <hudson.plugins.git.UserRemoteConfig>
-        <url>${GITHUB_REPO}</url>
-        <credentialsId>github</credentialsId>
-      </hudson.plugins.git.UserRemoteConfig>
-    </userRemoteConfigs>
-    <branches>
-      <hudson.plugins.git.BranchSpec>
-        <name>${BRANCH}</name>
-      </hudson.plugins.git.BranchSpec>
-    </branches>
-    <doGenerateSubmoduleConfigurations>false</doGenerateSubmoduleConfigurations>
-    <submoduleCfg class="empty-list"/>
-    <extensions/>
-  </scm>
-
   <triggers>
     <hudson.triggers.SCMTrigger>
       <spec>* * * * *</spec>
       <ignorePostCommitHooks>false</ignorePostCommitHooks>
     </hudson.triggers.SCMTrigger>
   </triggers>
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition" plugin="workflow-cps">
+    <scm class="hudson.plugins.git.GitSCM" plugin="git">
+      <configVersion>2</configVersion>
+      <userRemoteConfigs>
+        <hudson.plugins.git.UserRemoteConfig>
+          <url>{repo}</url>
+          <credentialsId>github</credentialsId>
+        </hudson.plugins.git.UserRemoteConfig>
+      </userRemoteConfigs>
+      <branches>
+        <hudson.plugins.git.BranchSpec>
+          <name>{branch}</name>
+        </hudson.plugins.git.BranchSpec>
+      </branches>
+      <doGenerateSubmoduleConfigurations>false</doGenerateSubmoduleConfigurations>
+      <submoduleCfg class="empty-list"/>
+      <extensions/>
+    </scm>
+    <scriptPath>Jenkinsfile</scriptPath>
+    <lightweight>true</lightweight>
+  </definition>
+  <disabled>false</disabled>
+</flow-definition>""".format(repo=repo, branch=branch)
 
-  <buildWrappers/>
+with open('/tmp/job-config.xml', 'w') as f:
+    f.write(xml)
+print("Job XML written to /tmp/job-config.xml")
+PYEOF
 
-  <builders>
-    <hudson.tasks.Shell>
-      <command>
-set -x
-
-echo "=== Writing sonar-project.properties ==="
-cat > sonar-project.properties <<SONARCFG
-sonar.projectKey=${SONAR_PROJECT_KEY}
-sonar.projectName=${SONAR_PROJECT_NAME}
-sonar.sources=.
-sonar.language=py
-sonar.host.url=${SONAR_URL}
-sonar.token=${SONAR_TOKEN}
-SONARCFG
-
-echo "=== Environment ==="
-echo "Working dir: \$(pwd)"
-echo "Jenkins workspace: \${WORKSPACE:-not set}"
-echo "Python: \$(python3 --version)"
-echo "Files in workspace:"
-ls -la
-
-echo ""
-echo "=== Checking SonarQube reachability ==="
-curl -sf --max-time 10 "${SONAR_URL}/api/system/status" || echo "WARNING: SonarQube unreachable"
-
-echo ""
-echo "=== Running SonarQube Analysis ==="
-${SCANNER_BIN} \
-  -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-  -Dsonar.projectName="${SONAR_PROJECT_NAME}" \
-  -Dsonar.sources=. \
-  -Dsonar.language=py \
-  -Dsonar.host.url=${SONAR_URL} \
-  -Dsonar.token=${SONAR_TOKEN}
-
-echo ""
-echo "=== Running Dec2Hex with test values ==="
-echo "--- Test: valid integer (255) ---"
-python3 Dec2Hex.py 255
-
-echo "--- Test: valid integer (16) ---"
-python3 Dec2Hex.py 16
-
-echo "--- Test: no argument (should show usage message) ---"
-python3 Dec2Hex.py || true
-
-echo "--- Test: non-integer input (should handle gracefully) ---"
-python3 Dec2Hex.py hello || true
-
-echo ""
-echo "=== Running Unit Tests ==="
-python3 -m pytest ${TEST_FILE} -v || true
-      </command>
-    </hudson.tasks.Shell>
-  </builders>
-
-  <publishers/>
-  <concurrentBuild>false</concurrentBuild>
-</project>
-XML
-
-echo "==> Job XML written to /tmp/job-config.xml"
-echo "==> Branch in XML: $(grep -o '<name>[^<]*</name>' /tmp/job-config.xml | head -1)"
-
+echo "==> Submitting job to Jenkins..."
 cli create-job "${JOB_NAME}" < /tmp/job-config.xml
 echo "==> Job '${JOB_NAME}' created."
 
-# ── 5. Wipe workspace so Jenkins does a clean Git checkout ───────────────────
-echo "==> Wiping workspace to ensure clean Git checkout..."
+# ── 4. Wipe workspace for a clean first checkout ──────────────────────────────
+echo "==> Clearing any stale workspace..."
 rm -rf "/var/lib/jenkins/workspace/${JOB_NAME}"
 echo "==> Workspace cleared."
 
-# ── 6. Trigger initial build and show output ──────────────────────────────────
+# ── 5. Trigger initial build ──────────────────────────────────────────────────
 echo "==> Triggering initial build..."
 set +e
 cli build "${JOB_NAME}" -s

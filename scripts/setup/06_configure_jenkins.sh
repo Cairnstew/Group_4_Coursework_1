@@ -14,18 +14,7 @@ fi
 JENKINS_URL="${JENKINS_URL:-http://localhost:8080}"
 JENKINS_USER="${JENKINS_USER:-admin}"
 JENKINS_PASS="${JENKINS_PASS:-admin}"
-JOB_NAME="${JOB_NAME:-job-01}"
-SONAR_URL="${SONAR_URL:-http://localhost:9000}"
-SONAR_PROJECT_KEY="${SONAR_PROJECT_KEY:-group4-dec2hex}"
-SONAR_PROJECT_NAME="${SONAR_PROJECT_NAME:-Group4 Dec2Hex}"
 PUBLIC_IP=$(curl -sf --max-time 5 http://checkip.amazonaws.com 2>/dev/null || echo "localhost")
-
-# ── Sonar token ────────────────────────────────────────────────────────────────
-if [ ! -f /tmp/sonar_token.txt ]; then
-  echo "ERROR: /tmp/sonar_token.txt not found — run 05_configure_sonarqube.sh first"
-  exit 1
-fi
-SONAR_TOKEN=$(cat /tmp/sonar_token.txt)
 
 # ── Wait for Jenkins ───────────────────────────────────────────────────────────
 echo "==> Waiting for Jenkins..."
@@ -51,27 +40,10 @@ else
 fi
 echo "==> Jenkins CLI ready."
 
-# ── Install SonarQube plugin ───────────────────────────────────────────────────
-echo "==> Installing SonarQube plugin..."
-set +e
-java -jar /tmp/jenkins-cli.jar \
-  -s "${JENKINS_URL}" \
-  -auth "${JENKINS_USER}:${JENKINS_PASS}" \
-  install-plugin sonar -deploy
-PLUGIN_EXIT=$?
-set -e
-if [ "$PLUGIN_EXIT" -ne 0 ]; then
-  echo "ERROR: Plugin install failed with exit code ${PLUGIN_EXIT}"
-  exit 1
-fi
-echo "==> Plugin installation complete."
-
-# ── sonar-project.properties is written by the Jenkins build step itself ──────
-echo "==> sonar-project.properties will be written by the Jenkins build step."
-
+# ── Plugin installation and job creation are handled by 07 ───────────────────
 echo ""
 echo "======================================================"
-echo "✅ Jenkins configured."
+echo "✅ Jenkins is up and CLI is ready."
 echo "   Jenkins:   http://${PUBLIC_IP}:8080"
-echo "   SonarQube: http://${PUBLIC_IP}:9000"
+echo "   Run 07_create_jenkins_job.sh to create the pipeline."
 echo "======================================================"
