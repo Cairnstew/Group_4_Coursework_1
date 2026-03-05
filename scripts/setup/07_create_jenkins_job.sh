@@ -207,6 +207,16 @@ cat > /tmp/job-config.xml <<XML
       <command>
 set -x
 
+echo "=== Writing sonar-project.properties ==="
+cat > sonar-project.properties <<SONARCFG
+sonar.projectKey=${SONAR_PROJECT_KEY}
+sonar.projectName=${SONAR_PROJECT_NAME}
+sonar.sources=.
+sonar.language=py
+sonar.host.url=${SONAR_URL}
+sonar.token=${SONAR_TOKEN}
+SONARCFG
+
 echo "=== Environment ==="
 echo "Working dir: \$(pwd)"
 echo "Jenkins workspace: \${WORKSPACE:-not set}"
@@ -260,20 +270,10 @@ echo "==> Branch in XML: $(grep -o '<name>[^<]*</name>' /tmp/job-config.xml | he
 cli create-job "${JOB_NAME}" < /tmp/job-config.xml
 echo "==> Job '${JOB_NAME}' created."
 
-# ── 5. Write sonar-project.properties to workspace ───────────────────────────
-echo "==> Writing sonar-project.properties..."
-WORKSPACE="/var/lib/jenkins/workspace/${JOB_NAME}"
-mkdir -p "${WORKSPACE}"
-cat > "${WORKSPACE}/sonar-project.properties" <<EOF
-sonar.projectKey=${SONAR_PROJECT_KEY}
-sonar.projectName=${SONAR_PROJECT_NAME}
-sonar.sources=.
-sonar.language=py
-sonar.host.url=${SONAR_URL}
-sonar.token=${SONAR_TOKEN}
-EOF
-chown -R jenkins:jenkins "${WORKSPACE}" 2>/dev/null || true
-echo "==> sonar-project.properties written."
+# ── 5. Wipe workspace so Jenkins does a clean Git checkout ───────────────────
+echo "==> Wiping workspace to ensure clean Git checkout..."
+rm -rf "/var/lib/jenkins/workspace/${JOB_NAME}"
+echo "==> Workspace cleared."
 
 # ── 6. Trigger initial build and show output ──────────────────────────────────
 echo "==> Triggering initial build..."
