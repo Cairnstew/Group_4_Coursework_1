@@ -8,7 +8,6 @@ ENV_FILE="${REPO_ROOT}/.env"
 # ── Load .env ─────────────────────────────────────────────────────────────────
 if [ ! -f "${ENV_FILE}" ]; then
   echo "ERROR: .env file not found at ${ENV_FILE}"
-  echo "       Add a .env file to the repo root and fill in your details."
   exit 1
 fi
 
@@ -29,7 +28,7 @@ if [ "${GITHUB_TOKEN}" = "your_personal_access_token_here" ]; then
   exit 1
 fi
 
-# ── Sonar token (written by 05_configure_sonarqube.sh) ───────────────────────
+# ── Sonar token ───────────────────────────────────────────────────────────────
 if [ ! -f /tmp/sonar_token.txt ]; then
   echo "ERROR: /tmp/sonar_token.txt not found — run 05_configure_sonarqube.sh first"
   exit 1
@@ -39,6 +38,35 @@ PUBLIC_IP=$(curl -sf --max-time 5 http://checkip.amazonaws.com 2>/dev/null || ec
 BRANCH="${GITHUB_BRANCH:-*/main}"
 SONAR_PROJECT_KEY="${SONAR_PROJECT_KEY:-group4-dec2hex}"
 SONAR_PROJECT_NAME="${SONAR_PROJECT_NAME:-Group4 Dec2Hex}"
+SCANNER_BIN="/var/lib/jenkins/sonarqube/sonar-scanner-3.3.0.1492-linux/bin/sonar-scanner"
+
+# ── Debug: print resolved config ──────────────────────────────────────────────
+echo ""
+echo "==> Config:"
+echo "    JENKINS_URL:        ${JENKINS_URL}"
+echo "    SONAR_URL:          ${SONAR_URL}"
+echo "    GITHUB_REPO:        ${GITHUB_REPO}"
+echo "    BRANCH:             ${BRANCH}"
+echo "    JOB_NAME:           ${JOB_NAME}"
+echo "    SONAR_PROJECT_KEY:  ${SONAR_PROJECT_KEY}"
+echo "    SONAR_TOKEN:        ${SONAR_TOKEN:0:8}... (truncated)"
+echo "    SCANNER_BIN:        ${SCANNER_BIN}"
+echo ""
+
+# ── Debug: verify sonar-scanner exists ────────────────────────────────────────
+echo "==> Checking sonar-scanner binary..."
+if [ -f "${SCANNER_BIN}" ]; then
+  echo "    Found: ${SCANNER_BIN}"
+else
+  echo "    WARNING: sonar-scanner not found at ${SCANNER_BIN}"
+  echo "    Searching for it..."
+  find /var/lib/jenkins -name "sonar-scanner" -type f 2>/dev/null || echo "    Not found anywhere under /var/lib/jenkins"
+fi
+
+# ── Debug: verify SonarQube is reachable ──────────────────────────────────────
+echo "==> Checking SonarQube is reachable..."
+SONAR_STATUS=$(curl -sf --max-time 10 "${SONAR_URL}/api/system/status" 2>/dev/null || echo "UNREACHABLE")
+echo "    SonarQube status: ${SONAR_STATUS}"
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 COOKIE_JAR="/tmp/jenkins-cookies.txt"
@@ -87,7 +115,8 @@ echo "==> SonarQube plugin ready."
 echo "==> Adding GitHub credentials to Jenkins..."
 fetch_crumb
 
-curl -sf -u "${JENKINS_USER}:${JENKINS_PASS}" \
+CRED_RESULT=$(curl -s -o /dev/null -w "%{http_code}" \
+  -u "${JENKINS_USER}:${JENKINS_PASS}" \
   --cookie "${COOKIE_JAR}" --cookie-jar "${COOKIE_JAR}" \
   -H "${CRUMB_FIELD}:${CRUMB_VALUE}" \
   -H "Content-Type: application/x-www-form-urlencoded" \
@@ -102,15 +131,15 @@ curl -sf -u "${JENKINS_USER}:${JENKINS_PASS}" \
       \"password\": \"${GITHUB_TOKEN}\",
       \"\$class\": \"com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl\"
     }
-  }" > /dev/null
-
-echo "==> GitHub credentials added (id: github)."
+  }")
+echo "==> GitHub credentials HTTP response: ${CRED_RESULT}"
 
 # ── 2. Add SonarQube token credential ────────────────────────────────────────
 echo "==> Adding SonarQube token credential to Jenkins..."
 fetch_crumb
 
-curl -sf -u "${JENKINS_USER}:${JENKINS_PASS}" \
+SONAR_CRED_RESULT=$(curl -s -o /dev/null -w "%{http_code}" \
+  -u "${JENKINS_USER}:${JENKINS_PASS}" \
   --cookie "${COOKIE_JAR}" --cookie-jar "${COOKIE_JAR}" \
   -H "${CRUMB_FIELD}:${CRUMB_VALUE}" \
   -H "Content-Type: application/x-www-form-urlencoded" \
@@ -124,54 +153,10 @@ curl -sf -u "${JENKINS_USER}:${JENKINS_PASS}" \
       \"secret\": \"${SONAR_TOKEN}\",
       \"\$class\": \"org.jenkinsci.plugins.plaincredentials.impl.StringCredentialsImpl\"
     }
-  }" > /dev/null
+  }")
+echo "==> SonarQube credential HTTP response: ${SONAR_CRED_RESULT}"
 
-echo "==> SonarQube credential added (id: sonarqube-token)."
-
-# ── 3. Configure SonarQube server + scanner via Groovy ───────────────────────
-echo "==> Configuring SonarQube server and scanner in Jenkins..."
-fetch_crumb
-
-GROOVY_SCRIPT=$(cat <<GROOVY
-import jenkins.model.*
-import hudson.plugins.sonar.*
-import hudson.plugins.sonar.model.*
-import hudson.tools.*
-
-def jenkins = Jenkins.getInstance()
-
-def sonarConfig = jenkins.getDescriptor(SonarGlobalConfiguration.class)
-def installation = new SonarInstallation(
-  "SonarQube",
-  "${SONAR_URL}",
-  "sonarqube-token",
-  null, null, null, null, null, null
-)
-sonarConfig.setInstallations(installation)
-sonarConfig.setBuildWrapperEnabled(true)
-sonarConfig.save()
-
-def scannerDesc = jenkins.getDescriptor(SonarRunnerInstallation.class)
-def scannerProps = new InstallSourceProperty([new SonarRunnerInstaller("latest")])
-def scanner = new SonarRunnerInstallation("SonarScanner", "", [scannerProps])
-scannerDesc.setInstallations(scanner)
-scannerDesc.save()
-
-jenkins.save()
-println "SonarQube configured successfully."
-GROOVY
-)
-
-curl -sf -u "${JENKINS_USER}:${JENKINS_PASS}" \
-  --cookie "${COOKIE_JAR}" --cookie-jar "${COOKIE_JAR}" \
-  -H "${CRUMB_FIELD}:${CRUMB_VALUE}" \
-  -X POST "${JENKINS_URL}/scriptText" \
-  --data-urlencode "script=${GROOVY_SCRIPT}" \
-  | grep -v "^$" || true
-
-echo "==> SonarQube server and scanner configured."
-
-# ── 4. Create job ─────────────────────────────────────────────────────────────
+# ── 3. Create job ─────────────────────────────────────────────────────────────
 echo "==> Creating Jenkins job: ${JOB_NAME}..."
 
 set +e
@@ -200,7 +185,7 @@ cat > /tmp/job-config.xml <<XML
     </userRemoteConfigs>
     <branches>
       <hudson.plugins.git.BranchSpec>
-        <n>${BRANCH}</n>
+        <name>${BRANCH}</name>
       </hudson.plugins.git.BranchSpec>
     </branches>
     <doGenerateSubmoduleConfigurations>false</doGenerateSubmoduleConfigurations>
@@ -215,27 +200,35 @@ cat > /tmp/job-config.xml <<XML
     </hudson.triggers.SCMTrigger>
   </triggers>
 
-  <buildWrappers>
-    <hudson.plugins.sonar.SonarBuildWrapper plugin="sonar"/>
-  </buildWrappers>
+  <buildWrappers/>
 
   <builders>
-    <hudson.plugins.sonar.SonarRunnerBuilder plugin="sonar">
-      <installationName>SonarScanner</installationName>
-      <project>sonar-project.properties</project>
-      <properties>
-sonar.projectKey=${SONAR_PROJECT_KEY}
-sonar.projectName=${SONAR_PROJECT_NAME}
-sonar.sources=.
-sonar.language=py
-      </properties>
-      <javaOpts/>
-      <additionalArguments/>
-      <jdk>(Inherit From Job)</jdk>
-    </hudson.plugins.sonar.SonarRunnerBuilder>
-
     <hudson.tasks.Shell>
       <command>
+set -x
+
+echo "=== Environment ==="
+echo "Working dir: \$(pwd)"
+echo "Jenkins workspace: \${WORKSPACE:-not set}"
+echo "Python: \$(python3 --version)"
+echo "Files in workspace:"
+ls -la
+
+echo ""
+echo "=== Checking SonarQube reachability ==="
+curl -sf --max-time 10 "${SONAR_URL}/api/system/status" || echo "WARNING: SonarQube unreachable"
+
+echo ""
+echo "=== Running SonarQube Analysis ==="
+${SCANNER_BIN} \
+  -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+  -Dsonar.projectName="${SONAR_PROJECT_NAME}" \
+  -Dsonar.sources=. \
+  -Dsonar.language=py \
+  -Dsonar.host.url=${SONAR_URL} \
+  -Dsonar.token=${SONAR_TOKEN}
+
+echo ""
 echo "=== Running Dec2Hex with test values ==="
 echo "--- Test: valid integer (255) ---"
 python3 Dec2Hex.py 255
@@ -261,6 +254,9 @@ python3 -m pytest test_Dec2Hex.py -v || true
 </project>
 XML
 
+echo "==> Job XML written to /tmp/job-config.xml"
+echo "==> Branch in XML: $(grep -o '<name>[^<]*</name>' /tmp/job-config.xml | head -1)"
+
 cli create-job "${JOB_NAME}" < /tmp/job-config.xml
 echo "==> Job '${JOB_NAME}' created."
 
@@ -277,11 +273,25 @@ sonar.host.url=${SONAR_URL}
 sonar.token=${SONAR_TOKEN}
 EOF
 chown -R jenkins:jenkins "${WORKSPACE}" 2>/dev/null || true
+echo "==> sonar-project.properties written."
 
-# ── 6. Trigger initial build ──────────────────────────────────────────────────
+# ── 6. Trigger initial build and show output ──────────────────────────────────
 echo "==> Triggering initial build..."
+set +e
 cli build "${JOB_NAME}" -s
-echo "==> Build complete."
+BUILD_STATUS=$?
+set -e
+
+echo ""
+echo "==> Build finished with status: ${BUILD_STATUS}. Fetching console output..."
+echo "────────────────────────────────────────────────"
+cli console "${JOB_NAME}" 1 || true
+echo "────────────────────────────────────────────────"
+
+if [ "$BUILD_STATUS" -ne 0 ]; then
+  echo "❌ Build FAILED — see console output above"
+  exit 1
+fi
 
 echo ""
 echo "══════════════════════════════════════════════════════"
