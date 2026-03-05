@@ -244,7 +244,7 @@ python3 Dec2Hex.py hello || true
 
 echo ""
 echo "=== Running Unit Tests ==="
-python3 -m pytest test_Dec2Hex.py -v || true
+python3 -m pytest ${TEST_FILE} -v || true
       </command>
     </hudson.tasks.Shell>
   </builders>
