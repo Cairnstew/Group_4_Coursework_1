@@ -1,0 +1,80 @@
+pipeline {
+    agent any
+
+    environment {
+        SONAR_URL        = 'http://localhost:9000'
+        SONAR_PROJECT_KEY = 'group4-dec2hex'
+        SONAR_PROJECT_NAME = 'Group4 Dec2Hex'
+        SCANNER_BIN      = '/var/lib/jenkins/sonarqube/sonar-scanner-3.3.0.1492-linux/bin/sonar-scanner'
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                echo "=== Workspace: ${env.WORKSPACE} ==="
+                echo "=== Branch: ${env.GIT_BRANCH} ==="
+                sh 'ls -la'
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
+                    sh """
+                        echo "=== Checking SonarQube is reachable ==="
+                        curl -sf --max-time 10 ${SONAR_URL}/api/system/status
+
+                        echo "=== Running SonarQube Analysis ==="
+                        ${SCANNER_BIN} \
+                            -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                            -Dsonar.projectName="${SONAR_PROJECT_NAME}" \
+                            -Dsonar.sources=. \
+                            -Dsonar.language=py \
+                            -Dsonar.host.url=${SONAR_URL} \
+                            -Dsonar.token=\${SONAR_TOKEN}
+                    """
+                }
+            }
+        }
+
+        stage('Run Dec2Hex') {
+            steps {
+                sh '''
+                    echo "=== Running Dec2Hex with test values ==="
+
+                    echo "--- Test: valid integer (255) ---"
+                    python3 Dec2Hex.py 255
+
+                    echo "--- Test: valid integer (16) ---"
+                    python3 Dec2Hex.py 16
+
+                    echo "--- Test: no argument (should show usage) ---"
+                    python3 Dec2Hex.py || true
+
+                    echo "--- Test: non-integer input (should handle gracefully) ---"
+                    python3 Dec2Hex.py hello || true
+                '''
+            }
+        }
+
+        stage('Unit Tests') {
+            steps {
+                sh '''
+                    echo "=== Running Unit Tests ==="
+                    python3 -m pytest test_Dec2Hex.py -v || true
+                '''
+            }
+        }
+
+    }
+
+    post {
+        success {
+            echo "✅ Pipeline passed — view SonarQube report at ${SONAR_URL}/dashboard?id=${SONAR_PROJECT_KEY}"
+        }
+        failure {
+            echo "❌ Pipeline failed — check the stage logs above"
+        }
+    }
+}
