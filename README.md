@@ -1,203 +1,179 @@
-# Software Engineering and DevOps Coursework 1 Repository
+# Group 4 – SE & DevOps Coursework 1
+**Module:** Software Engineering and DevOps (MMI330704)  
+**Institution:** Glasgow Caledonian University  
+**Deadline:** Thursday 12th March 2026  
 
+---
 
-## Repository Contents
-- `Dec2Hex.py`: Initial Python script for decimal-to-hex conversion.
-- `test_Dec2Hex.py`: Unit test file (added in Task 5).
-- `README.md`: This file (setup guide based on Lab 5 and coursework specs).
-- (Optional) Other files: Jenkins configs, SonarQube reports (for evidence).
+## Overview
 
-## Prerequisites
-- AWS Account (with EC2 access).
-- GitHub Account (added as collaborator to this repo).
-- Local machine with SSH client (e.g., Git Bash for Windows).
-- Familiarity with Bash commands (see Lab 5 tutorial links).
-- Python 3 installed on EC2 instance.
+This repository contains the implementation of a **Continuous Integration (CI) Pipeline** for GCU SE & DevOps Coursework 1. The pipeline automates building, running, and static code analysis of a Python project using **Jenkins** and **SonarQube**, deployed on an AWS EC2 instance.
 
-## Setup Instructions
-Follow these steps to complete the practical component (40 marks). Based on Lab 5: Automation and Jenkins, and Coursework Tasks 1-6.
+---
 
-Group members: Clone this repository (https://github.com/Cairnstew/Group_4_Coursework_1). You may already be added as collaborators. Configure Git with your name and email before contributing.
+## Repository Structure
 
-### Task 1: Deploy AWS EC2 Instance (3 marks)
-1. Launch an EC2 instance via AWS Console:
-   - Instance Type: t2.large (more resources than previous labs).
-   - OS: Up-to-date Ubuntu (AMI: Ubuntu Server 22.04 LTS or similar).
-   - Storage: 8GB volume.
-   - Security Group: Open ports 22 (SSH), 8080 (Jenkins), 9000 (SonarQube).
-     - Inbound Rules:
-       - SSH (TCP, Port 22, Source: Anywhere or your IP).
-       - Custom TCP (Port 8080, Source: Anywhere).
-       - Custom TCP (Port 9000, Source: Anywhere).
-   - Key Pair: Create or use existing for SSH access.
+```
+Group_4_Coursework_1/
+├── Dec2Hex.py                  # Main Python project (decimal to hex converter)
+├── test_Dec2Hex.py             # Unit tests for the Python project
+├── sonar-project.properties    # SonarQube configuration
+├── scripts/
+│   └── setup/
+│       ├── main.sh                     # Master script — runs all steps in order
+│       ├── 01_install_jenkins.sh       # Installs Java and Jenkins, pre-sets admin credentials
+│       ├── 02_install_docker.sh        # Installs Docker
+│       ├── 03_install_sonar_scanner.sh # Downloads and configures SonarQube Scanner
+│       ├── 04_start_sonarqube.sh       # Launches SonarQube Docker container
+│       ├── 05_configure_sonarqube.sh   # Generates SonarQube token and webhook
+│       └── 06_configure_jenkins.sh     # Installs SonarQube plugin, writes project config
+└── README.md
+```
 
-2. Connect via SSH:
-   ```
-   ssh -i your-key.pem ubuntu@your-ec2-public-ip
-   ```
+---
 
-3. Install Python, Git, and Jenkins:
-   ```
-   sudo apt update
-   sudo apt install -y python3 python3-pip git
-   ```
-   (Jenkins installation detailed in Task 3.)
+## Infrastructure
 
-**Note:** Stop/terminate instance when not in use to avoid costs.
+- **Cloud:** AWS EC2
+- **Instance type:** t2.large
+- **OS:** Ubuntu (latest)
+- **Ports open:** 8080 (Jenkins), 9000 (SonarQube), 22 (SSH)
 
-### Task 2: Configure Git and GitHub Repository (3 marks)
-1. On EC2 instance (or locally), configure Git:
-   ```
-   git config --global user.name "Your Name"
-   git config --global user.email "your.email@example.com"
-   ```
+---
 
-2. Clone this repository:
-   ```
-   git clone https://github.com/Cairnstew/Group_4_Coursework_1.git
-   cd Group_4_Coursework_1
-   ```
+## Quick Start
 
-3. Add or update `Dec2Hex.py` (If not there):
-   ```python
-   import sys
+> **Prerequisites:** EC2 instance is running, you are connected via SSH, and ports 8080/9000 are open in the Security Group.
 
-   def decimal_to_hex(decimal_value):
-       hex_chars = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F']
-       hexadecimal = ""
-       num = decimal_value
-       print(f"Converting the Decimal Value {num} to Hex...")
-       while num != 0:
-           rem = num % 16
-           hexadecimal = hex_chars[rem] + hexadecimal
-           num //= 16
-       print(f"Hexadecimal representation is: {hexadecimal}")
-       return hexadecimal
+### Option A — Run everything at once
 
-   if __name__ == "__main__":
-       if len(sys.argv) > 1:
-           try:
-               decimal_value = int(sys.argv[1])
-               decimal_to_hex(decimal_value)
-           except ValueError:
-               print("Please provide a valid integer.")
-       else:
-           print("Usage: python script.py <decimal_number>")
-   ```
+```bash
+git clone https://github.com/Cairnstew/Group_4_Coursework_1.git
+cd Group_4_Coursework_1/scripts/setup
+chmod +x *.sh
+sudo bash main.sh
+```
 
-4. Commit and push (if changes made):
-   ```
-   git add Dec2Hex.py
-   git commit -m "Initial commit: Add Dec2Hex.py"
-   git push origin main
-   ```
-   Verify file appears on GitHub.
+### Option B — Run steps individually
 
-### Task 3: Configure Jenkins Freestyle Project (2+2+2 marks)
-1. Install Jenkins (from Lab 5):
-   ```
-   curl -fsSL https://pkg.jenkins.io/debian/jenkins.io-2023.key | sudo tee /usr/share/keyrings/jenkins-keyring.asc > /dev/null
-   echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian binary/ | sudo tee /etc/apt/sources.list.d/jenkins.list > /dev/null
-   sudo apt-get update
-   sudo apt install -y ca-certificates fontconfig openjdk-17-jre default-jdk jenkins
-   sudo systemctl start jenkins
-   sudo systemctl enable jenkins
-   ```
+```bash
+sudo bash 01_install_jenkins.sh       # Install Jenkins (sets admin:admin credentials)
+sudo bash 02_install_docker.sh        # Install Docker
+sudo bash 03_install_sonar_scanner.sh # Install SonarQube Scanner
+sudo bash 04_start_sonarqube.sh       # Start SonarQube container
+sudo bash 05_configure_sonarqube.sh   # Configure SonarQube (generates /tmp/sonar_token.txt)
+sudo bash 06_configure_jenkins.sh     # Configure Jenkins and install SonarQube plugin
+```
 
-2. Access Jenkins: `http://your-ec2-ip:8080`.
-   - Unlock with admin password: `sudo cat /var/lib/jenkins/secrets/initialAdminPassword`.
-   - Install suggested plugins.
-   - Create admin account.
-   - Install additional plugins: Groovy, Docker Pipeline, SSH Agent, SSH Pipeline Steps.
-   - Restart: `http://your-ec2-ip:8080/restart`.
+> **Note:** `06_configure_jenkins.sh` depends on `/tmp/sonar_token.txt` generated by step 05. Always run steps in order.
 
-3. Create Freestyle Project:
-   - New Item > Freestyle project > Name: "Dec2Hex-CI".
-   - Source Code Management: Git > Repository URL: https://github.com/Cairnstew/Group_4_Coursework_1.git.
-   - Credentials: Add GitHub Personal Access Token (repo scope, 7-day expiration).
-   - Build Triggers: Poll SCM (e.g., `H/5 * * * *` for every 5 minutes).
-   - Build Steps: Execute Shell:
+---
+
+## Accessing the Services
+
+After setup completes, both services are accessible via your EC2 public IP:
+
+| Service    | URL                          | Default Credentials |
+|------------|------------------------------|---------------------|
+| Jenkins    | `http://<your-ec2-ip>:8080`  | `admin` / `admin`   |
+| SonarQube  | `http://<your-ec2-ip>:9000`  | `admin` / `admin`   |
+
+To find your public IP:
+```bash
+curl -s http://checkip.amazonaws.com
+```
+
+---
+
+## CI Pipeline — How It Works
+
+1. A code change is pushed to this GitHub repository
+2. Jenkins detects the change via **Poll SCM** (checks every minute: `* * * * *`)
+3. Jenkins pulls the latest code from GitHub
+4. **SonarQube Scanner** runs static code analysis and sends results to the SonarQube server
+5. Jenkins executes the Python project with test input values
+6. Jenkins runs the unit tests
+7. The build is marked **Success** or **Failure** based on the results
+
+---
+
+## The Python Project
+
+**File:** `Dec2Hex.py`  
+Converts a decimal integer to its hexadecimal representation.
+
+```bash
+# Basic usage
+python3 Dec2Hex.py 255
+# Output: Hexadecimal representation is: FF
+
+# No argument provided → returns usage error
+python3 Dec2Hex.py
+# Output: Usage: python script.py <decimal_number>
+
+# Non-integer input → handled gracefully
+python3 Dec2Hex.py hello
+# Output: Please provide a valid integer.
+```
+
+Unit tests are in `test_Dec2Hex.py` and cover normal conversion, missing input, and invalid input handling.
+
+---
+
+## Jenkins Job Configuration
+
+The Jenkins job `job-01` is a **Freestyle Project** configured to:
+
+- **Source Code Management:** Git — this repository, branch `*/main`
+- **Build Trigger:** Poll SCM every minute (`* * * * *`)
+- **Build Steps:**
+  1. Execute SonarQube Scanner (using `./sonar-project.properties`)
+  2. Execute Shell:
+     ```bash
+     python3 Dec2Hex.py 255
+     python3 Dec2Hex.py
+     python3 Dec2Hex.py hello
+     python3 -m pytest test_Dec2Hex.py -v
      ```
-     python3 Dec2Hex.py 15  # Example input
-     ```
 
-4. Build Now: Check console output for auto-detect changes, compile, and run.
+---
 
-### Task 4: Implement Static Code Analysis with SonarQube (10 marks)
-1. Install SonarQube on EC2 (Port 9000 open).
-   - Follow official docs: https://docs.sonarsource.com/sonarqube/latest/setup-and-upgrade/install-the-server/.
-   - Basic setup: Download, run as service.
+## Troubleshooting
 
-2. Install SonarScanner:
-   ```
-   sudo apt install -y unzip
-   wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
-   unzip sonar-scanner-cli-5.0.1.3006-linux.zip
-   sudo mv sonar-scanner-5.0.1.3006-linux/ /opt/sonar-scanner
-   sudo chown -R ubuntu:ubuntu /opt/sonar-scanner
-   echo 'export PATH="$PATH:/opt/sonar-scanner/bin"' >> ~/.bashrc
-   source ~/.bashrc
-   ```
+**Jenkins won't start / password rejected**
+```bash
+# Check Jenkins status
+sudo systemctl status jenkins
 
-3. In Jenkins Project: Add Build Step for SonarScanner.
-   - Configure sonar-project.properties in repo root:
-     ```
-     sonar.projectKey=Dec2Hex
-     sonar.sources=.
-     sonar.language=py
-     sonar.host.url=http://localhost:9000
-     sonar.login=your-sonar-token
-     ```
-   - Execute Shell: `sonar-scanner`.
+# View logs
+sudo journalctl -u jenkins -n 50
 
-4. Run build and view SonarQube report at `http://your-ec2-ip:9000`.
+# Get the auto-generated password (if Groovy init script didn't run)
+sudo cat /var/lib/jenkins/secrets/initialAdminPassword
+```
 
-### Task 5: Improve Python Project with Error Handling and Tests (10 marks)
-1. Extend `Dec2Hex.py`:
-   - Error if no input.
-   - Handle non-integer inputs without crashing.
+**SonarQube container not running**
+```bash
+docker ps
+# If not listed, restart it:
+docker run -d --rm --name sonarqube-container -p 9000:9000 sonarqube
+```
 
-2. Add Unit Tests (`test_Dec2Hex.py` using unittest):
-   ```python
-   import unittest
-   from Dec2Hex import decimal_to_hex
+**Script exits silently**  
+All scripts use `set -euo pipefail` — any failing command will exit immediately. Run with `bash -x` for detailed output:
+```bash
+sudo bash -x 06_configure_jenkins.sh
+```
 
-   class TestDecimalToHex(unittest.TestCase):
-       def test_valid_input(self):
-           self.assertEqual(decimal_to_hex(15), 'F')
+---
 
-       def test_no_input(self):
-           with self.assertRaises(SystemExit):
-               decimal_to_hex(None)  # Simulate no input
+## Coursework Tasks — Status
 
-       def test_invalid_input(self):
-           self.assertIsNone(decimal_to_hex('abc'))  # Return None or handle
-
-   if __name__ == '__main__':
-       unittest.main()
-   ```
-
-3. Commit changes with Git: Use meaningful commits to track development.
-
-### Task 6: Run CI Pipeline and Fix Issues (8 marks)
-1. Push changes; Jenkins auto-builds.
-2. Address SonarQube feedback (e.g., code smells).
-3. Ensure all tests pass; build succeeds.
-4. Use Git for version control (branching if needed).
-
-## Usage
-- Run script: `python3 Dec2Hex.py 15` → Output: "F".
-- Jenkins: Auto-triggers on push.
-- SonarQube: Analyzes code quality.
-
-## Evidence Collection (for Submission)
-1. Jenkins Console Output (original + updated code).
-2. SonarQube Screenshot.
-3. Final Code Files.
-4. Git Log: `git log --oneline`.
-5. Unit Test Files.
-
-## Video Demonstration (5 min max)
-- Record pushing changes, Jenkins auto-build, console output, SonarQube report.
-- Use Screencast-O-Matic; upload to GCU OneDrive; share link.
-- Name: Group_Name_DevOps_CW1.mp4.
+| Task | Description | Status |
+|------|-------------|--------|
+| Task 1 | EC2 instance, Jenkins, Python, Git installed | ✅ |
+| Task 2 | GitHub repo configured, Dec2Hex.py pushed | ✅ |
+| Task 3 | Jenkins Freestyle job — detect changes, compile, run | ✅ |
+| Task 4 | SonarQube static analysis integrated | ✅ |
+| Task 5 | Error handling added to Python project + unit tests | ✅ |
+| Task 6 | All tests passing, SonarQube feedback addressed | ✅ |
