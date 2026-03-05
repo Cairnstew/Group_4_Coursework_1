@@ -1,28 +1,18 @@
 #!/bin/bash
 set -euo pipefail
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  07_create_jenkins_job.sh
-#
-#  Reads config from .env in the same directory.
-#  Run after 01–06 scripts have completed.
-#
-#  Usage:
-#    sudo bash 07_create_jenkins_job.sh
-# ══════════════════════════════════════════════════════════════════════════════
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ENV_FILE="${SCRIPT_DIR}/.env"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+ENV_FILE="${REPO_ROOT}/.env"
 
 # ── Load .env ─────────────────────────────────────────────────────────────────
 if [ ! -f "${ENV_FILE}" ]; then
   echo "ERROR: .env file not found at ${ENV_FILE}"
-  echo "       Copy .env.example to .env and fill in your details."
+  echo "       Add a .env file to the repo root and fill in your details."
   exit 1
 fi
 
 set -o allexport
-# shellcheck source=/dev/null
 source "${ENV_FILE}"
 set +o allexport
 
@@ -50,7 +40,7 @@ BRANCH="${GITHUB_BRANCH:-*/main}"
 SONAR_PROJECT_KEY="${SONAR_PROJECT_KEY:-group4-dec2hex}"
 SONAR_PROJECT_NAME="${SONAR_PROJECT_NAME:-Group4 Dec2Hex}"
 
-# ── Helper: fetch crumb + session ─────────────────────────────────────────────
+# ── Helpers ───────────────────────────────────────────────────────────────────
 COOKIE_JAR="/tmp/jenkins-cookies.txt"
 
 fetch_crumb() {
@@ -62,7 +52,6 @@ fetch_crumb() {
   CRUMB_VALUE=$(echo "$CRUMB_JSON" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['crumb'])")
 }
 
-# Jenkins CLI helper
 cli() {
   java -jar /tmp/jenkins-cli.jar \
     -s "${JENKINS_URL}" \
@@ -151,7 +140,6 @@ import hudson.tools.*
 
 def jenkins = Jenkins.getInstance()
 
-// Configure SonarQube server
 def sonarConfig = jenkins.getDescriptor(SonarGlobalConfiguration.class)
 def installation = new SonarInstallation(
   "SonarQube",
@@ -163,7 +151,6 @@ sonarConfig.setInstallations(installation)
 sonarConfig.setBuildWrapperEnabled(true)
 sonarConfig.save()
 
-// Configure SonarQube Scanner tool
 def scannerDesc = jenkins.getDescriptor(SonarRunnerInstallation.class)
 def scannerProps = new InstallSourceProperty([new SonarRunnerInstaller("latest")])
 def scanner = new SonarRunnerInstallation("SonarScanner", "", [scannerProps])
@@ -184,7 +171,7 @@ curl -sf -u "${JENKINS_USER}:${JENKINS_PASS}" \
 
 echo "==> SonarQube server and scanner configured."
 
-# ── 4. Create job-01 ──────────────────────────────────────────────────────────
+# ── 4. Create job ─────────────────────────────────────────────────────────────
 echo "==> Creating Jenkins job: ${JOB_NAME}..."
 
 set +e
@@ -279,9 +266,9 @@ echo "==> Job '${JOB_NAME}' created."
 
 # ── 5. Write sonar-project.properties to workspace ───────────────────────────
 echo "==> Writing sonar-project.properties..."
-REPO_DIR="/var/lib/jenkins/workspace/${JOB_NAME}"
-mkdir -p "${REPO_DIR}"
-cat > "${REPO_DIR}/sonar-project.properties" <<EOF
+WORKSPACE="/var/lib/jenkins/workspace/${JOB_NAME}"
+mkdir -p "${WORKSPACE}"
+cat > "${WORKSPACE}/sonar-project.properties" <<EOF
 sonar.projectKey=${SONAR_PROJECT_KEY}
 sonar.projectName=${SONAR_PROJECT_NAME}
 sonar.sources=.
@@ -289,14 +276,13 @@ sonar.language=py
 sonar.host.url=${SONAR_URL}
 sonar.token=${SONAR_TOKEN}
 EOF
-chown -R jenkins:jenkins "${REPO_DIR}" 2>/dev/null || true
+chown -R jenkins:jenkins "${WORKSPACE}" 2>/dev/null || true
 
 # ── 6. Trigger initial build ──────────────────────────────────────────────────
 echo "==> Triggering initial build..."
 cli build "${JOB_NAME}" -s
 echo "==> Build complete."
 
-# ── Done ──────────────────────────────────────────────────────────────────────
 echo ""
 echo "══════════════════════════════════════════════════════"
 echo "✅  Pipeline is live!"

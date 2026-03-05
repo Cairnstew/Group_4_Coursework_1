@@ -1,24 +1,18 @@
 #!/bin/bash
 set -euo pipefail
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  main.sh — Full CI pipeline setup for GCU SE & DevOps CW1
-#
-#  1. Fill in your details in the .env file in this directory
-#  2. Run: sudo bash main.sh
-# ══════════════════════════════════════════════════════════════════════════════
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ENV_FILE="${SCRIPT_DIR}/.env"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+ENV_FILE="${REPO_ROOT}/.env"
 
 if [ ! -f "${ENV_FILE}" ]; then
   echo "ERROR: .env file not found at ${ENV_FILE}"
-  echo "       Edit the .env file and fill in your GitHub details before running."
+  echo "       Add a .env file to the repo root and fill in your GitHub details."
   exit 1
 fi
 
-# Quick check that the token placeholder has been replaced
 source "${ENV_FILE}"
+
 if [ "${GITHUB_TOKEN:-your_personal_access_token_here}" = "your_personal_access_token_here" ]; then
   echo "ERROR: GITHUB_TOKEN is still the placeholder value in .env — update it first."
   exit 1
