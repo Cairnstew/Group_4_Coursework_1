@@ -8,7 +8,7 @@
 
 ## Overview
 
-This repository contains the implementation of a **Continuous Integration (CI) Pipeline** for GCU SE & DevOps Coursework 1. The pipeline automates building, testing, and static code analysis of a Python project using **Jenkins** and **SonarQube**, deployed on an **AWS EC2** instance provisioned with **Terraform**.
+This repository contains the **Practical Component** of GCU SE & DevOps Coursework 1 (40 marks). It implements a Continuous Integration (CI) Pipeline that automates building, testing, and static code analysis of a Python project using **Jenkins** and **SonarQube**, deployed on an **AWS EC2** instance provisioned with **Terraform**.
 
 The core application (`Dec2Hex.py`) converts decimal integers to hexadecimal — used as the subject of the CI pipeline demonstration.
 
@@ -180,14 +180,17 @@ This ensures all contributors use the same tool versions regardless of their loc
 
 ## Coursework Task Status
 
-| Task | Description | Status |
-|------|-------------|--------|
-| Task 1 | EC2 instance, Jenkins, Python, Git installed | ✅ |
-| Task 2 | GitHub repo configured, `Dec2Hex.py` pushed | ✅ |
-| Task 3 | Jenkins job — detects changes, runs app | ✅ |
-| Task 4 | SonarQube static analysis integrated | ✅ |
-| Task 5 | Error handling added to Python project + unit tests | ✅ |
-| Task 6 | All tests passing, SonarQube feedback addressed | ✅ |
+| Task | Description | Marks | Status |
+|------|-------------|-------|--------|
+| Task 1 | Deploy EC2 (`t2.large`, Ubuntu, ports 8080/9000 open). Install Python, Git, and Jenkins. | 3 | ✅ |
+| Task 2 | Configure Git, create remote GitHub repo, push `Dec2Hex.py`. | 3 | ✅ |
+| Task 3a | Jenkins Freestyle Project — automatically detect changes to remote GitHub repo. | 2 | ✅ |
+| Task 3b | Jenkins — compile the code. | 2 | ✅ |
+| Task 3c | Jenkins — run the code with appropriate input values. | 2 | ✅ |
+| Task 4 | Integrate SonarQube and SonarScanner for static code analysis. | 10 | ✅ |
+| Task 5 | Extend `Dec2Hex.py` to handle missing and non-integer inputs. Add unit tests. Use version control to track changes. | 10 | ✅ |
+| Task 6 | Ensure all test conditions pass and build succeeds. Address SonarQube feedback. Use version control to track changes. | 8 | ✅ |
+| **Total** | | **40** | |
 
 ---
 
