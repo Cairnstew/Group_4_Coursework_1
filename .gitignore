@@ -4,10 +4,10 @@
 .env.*
 node_modules/
 *.log
-terraform.tfstate
+# Terraform
+*.tfstate
+*.tfstate.*
 .terraform/
-terraform.tfstate.backup
-terraform.tfstate
 
 
 # Byte-compiled / optimized / DLL files
