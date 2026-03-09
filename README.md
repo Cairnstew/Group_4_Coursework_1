@@ -1,13 +1,16 @@
 # Group 4 – SE & DevOps Coursework 1
+
 **Module:** Software Engineering and DevOps (MMI330704)  
 **Institution:** Glasgow Caledonian University  
-**Deadline:** Thursday 12th March 2026  
+**Deadline:** Thursday 12th March 2026
 
 ---
 
 ## Overview
 
-This repository contains the implementation of a **Continuous Integration (CI) Pipeline** for GCU SE & DevOps Coursework 1. The pipeline automates building, running, and static code analysis of a Python project using **Jenkins** and **SonarQube**, deployed on an AWS EC2 instance.
+This repository contains the implementation of a **Continuous Integration (CI) Pipeline** for GCU SE & DevOps Coursework 1. The pipeline automates building, testing, and static code analysis of a Python project using **Jenkins** and **SonarQube**, deployed on an **AWS EC2** instance provisioned with **Terraform**.
+
+The core application (`Dec2Hex.py`) converts decimal integers to hexadecimal — used as the subject of the CI pipeline demonstration.
 
 ---
 
@@ -15,68 +18,81 @@ This repository contains the implementation of a **Continuous Integration (CI) P
 
 ```
 Group_4_Coursework_1/
-├── Dec2Hex.py                  # Main Python project (decimal to hex converter)
-├── test_Dec2Hex.py             # Unit tests for the Python project
-├── sonar-project.properties    # SonarQube configuration
+├── Dec2Hex.py                          # Main Python app (decimal to hex converter)
+├── test_Dec2Hex.py                     # Unit tests (pytest)
+├── jenkinsfile                         # Jenkins Pipeline definition
+├── flake.nix                           # Nix flake for reproducible dev environment
+├── flake.lock                          # Nix lockfile
+├── .gitignore
+├── LICENSE
+│
 ├── scripts/
-│   └── setup/
-│       ├── main.sh                     # Master script — runs all steps in order
-│       ├── 01_install_jenkins.sh       # Installs Java and Jenkins, pre-sets admin credentials
-│       ├── 02_install_docker.sh        # Installs Docker
-│       ├── 03_install_sonar_scanner.sh # Downloads and configures SonarQube Scanner
-│       ├── 04_start_sonarqube.sh       # Launches SonarQube Docker container
-│       ├── 05_configure_sonarqube.sh   # Generates SonarQube token and webhook
-│       └── 06_configure_jenkins.sh     # Installs SonarQube plugin, writes project config
-└── README.md
+│   ├── connect.sh                      # SSH into the EC2 instance
+│   ├── deploy.sh                       # Run terraform init/validate/apply
+│   └── set-aws-creds.sh                # Helper to export AWS credentials
+│
+└── terraform/
+    ├── main.tf                         # AWS provider, EC2 instance, security groups
+    ├── terraform.tf                    # Terraform version/provider requirements
+    ├── docker-compose.yaml             # Jenkins + SonarQube + PostgreSQL stack
+    ├── .terraform.lock.hcl
+    ├── jenkins/
+    │   ├── Dockerfile                  # Custom Jenkins image (adds Python, plugins)
+    │   └── casc.yaml                   # Jenkins Configuration as Code (JCasC)
+    └── scripts/
+        └── bootstrap.sh.tpl            # EC2 user-data: installs Docker, starts stack
 ```
 
 ---
 
 ## Infrastructure
 
-- **Cloud:** AWS EC2
-- **Instance type:** t2.large
-- **OS:** Ubuntu (latest)
-- **Ports open:** 8080 (Jenkins), 9000 (SonarQube), 22 (SSH)
+The AWS infrastructure is fully defined in Terraform:
+
+| Property       | Value                                             |
+|----------------|---------------------------------------------------|
+| Cloud          | AWS EC2                                           |
+| Instance type  | `t2.large`                                        |
+| OS             | Ubuntu (latest)                                   |
+| Storage        | 25 GB gp3 (encrypted)                             |
+| Ports open     | `8080` (Jenkins), `9000` (SonarQube), `22` (SSH)  |
+
+On first boot, the EC2 instance runs `bootstrap.sh.tpl` which installs Docker, starts the full stack via Docker Compose, waits for SonarQube to be ready, generates a SonarQube token, and launches Jenkins with that token injected automatically.
 
 ---
 
-## Quick Start
+## Getting Started
 
-> **Prerequisites:** EC2 instance is running, you are connected via SSH, and ports 8080/9000 are open in the Security Group.
+### Prerequisites
 
-### Option A — Run everything at once
+- AWS credentials configured (use `scripts/set-aws-creds.sh` if using AWS Academy)
+- [Terraform](https://developer.hashicorp.com/terraform/install) >= 1.2
+- An SSH key pair named `vockey` in AWS (or update `key_name` in `main.tf`)
 
-```bash
-git clone https://github.com/Cairnstew/Group_4_Coursework_1.git
-cd Group_4_Coursework_1/scripts/setup
-chmod +x *.sh
-sudo bash main.sh
-```
-
-### Option B — Run steps individually
+### 1. Provision Infrastructure
 
 ```bash
-sudo bash 01_install_jenkins.sh       # Install Jenkins (sets admin:admin credentials)
-sudo bash 02_install_docker.sh        # Install Docker
-sudo bash 03_install_sonar_scanner.sh # Install SonarQube Scanner
-sudo bash 04_start_sonarqube.sh       # Start SonarQube container
-sudo bash 05_configure_sonarqube.sh   # Configure SonarQube (generates /tmp/sonar_token.txt)
-sudo bash 06_configure_jenkins.sh     # Configure Jenkins and install SonarQube plugin
+bash scripts/deploy.sh
 ```
 
-> **Note:** `06_configure_jenkins.sh` depends on `/tmp/sonar_token.txt` generated by step 05. Always run steps in order.
+This runs `terraform init`, `terraform validate`, and `terraform apply` automatically. The public IP of the new instance is printed at the end as a ready-to-use SSH command.
+
+### 2. SSH into the Instance
+
+```bash
+bash scripts/connect.sh <PUBLIC_IPV4_DNS>
+```
+
+Or set `PUBLIC_DNS` in a `.env` file in the repo root and run `bash scripts/connect.sh`.
 
 ---
 
 ## Accessing the Services
 
-After setup completes, both services are accessible via your EC2 public IP:
-
-| Service    | URL                          | Default Credentials |
-|------------|------------------------------|---------------------|
-| Jenkins    | `http://<your-ec2-ip>:8080`  | `admin` / `admin`   |
-| SonarQube  | `http://<your-ec2-ip>:9000`  | `admin` / `admin`   |
+| Service    | URL                           | Default Credentials |
+|------------|-------------------------------|---------------------|
+| Jenkins    | `http://<your-ec2-ip>:8080`   | `admin` / `admin`   |
+| SonarQube  | `http://<your-ec2-ip>:9000`   | `admin` / `admin`   |
 
 To find your public IP:
 ```bash
@@ -85,95 +101,96 @@ curl -s http://checkip.amazonaws.com
 
 ---
 
-## CI Pipeline — How It Works
+## The Python Application
 
-1. A code change is pushed to this GitHub repository
-2. Jenkins detects the change via **Poll SCM** (checks every minute: `* * * * *`)
-3. Jenkins pulls the latest code from GitHub
-4. **SonarQube Scanner** runs static code analysis and sends results to the SonarQube server
-5. Jenkins executes the Python project with test input values
-6. Jenkins runs the unit tests
-7. The build is marked **Success** or **Failure** based on the results
+**File:** `Dec2Hex.py`
 
----
-
-## The Python Project
-
-**File:** `Dec2Hex.py`  
-Converts a decimal integer to its hexadecimal representation.
+Implements decimal-to-hex conversion manually (without using Python's built-in `hex()`) with input validation and graceful error handling.
 
 ```bash
-# Basic usage
+# Normal conversion
 python3 Dec2Hex.py 255
 # Output: Hexadecimal representation is: FF
 
-# No argument provided → returns usage error
+# No argument
 python3 Dec2Hex.py
 # Output: Usage: python script.py <decimal_number>
 
-# Non-integer input → handled gracefully
+# Invalid input
 python3 Dec2Hex.py hello
 # Output: Please provide a valid integer.
 ```
 
-Unit tests are in `test_Dec2Hex.py` and cover normal conversion, missing input, and invalid input handling.
+**Unit tests** (`test_Dec2Hex.py`) cover:
 
----
+| Test | Input | Expected |
+|------|-------|----------|
+| `test_valid_integer` | `255` | `"FF"` |
+| `test_valid_integer_16` | `16` | `"10"` |
+| `test_zero` | `0` | `""` |
+| `test_large_number` | `256` | `"100"` |
 
-## Jenkins Job Configuration
-
-The Jenkins job `job-01` is a **Freestyle Project** configured to:
-
-- **Source Code Management:** Git — this repository, branch `*/main`
-- **Build Trigger:** Poll SCM every minute (`* * * * *`)
-- **Build Steps:**
-  1. Execute SonarQube Scanner (using `./sonar-project.properties`)
-  2. Execute Shell:
-     ```bash
-     python3 Dec2Hex.py 255
-     python3 Dec2Hex.py
-     python3 Dec2Hex.py hello
-     python3 -m pytest test_Dec2Hex.py -v
-     ```
-
----
-
-## Troubleshooting
-
-**Jenkins won't start / password rejected**
+Run tests locally:
 ```bash
-# Check Jenkins status
-sudo systemctl status jenkins
-
-# View logs
-sudo journalctl -u jenkins -n 50
-
-# Get the auto-generated password (if Groovy init script didn't run)
-sudo cat /var/lib/jenkins/secrets/initialAdminPassword
-```
-
-**SonarQube container not running**
-```bash
-docker ps
-# If not listed, restart it:
-docker run -d --rm --name sonarqube-container -p 9000:9000 sonarqube
-```
-
-**Script exits silently**  
-All scripts use `set -euo pipefail` — any failing command will exit immediately. Run with `bash -x` for detailed output:
-```bash
-sudo bash -x 06_configure_jenkins.sh
+python3 -m pytest test_Dec2Hex.py -v
 ```
 
 ---
 
-## Coursework Tasks — Status
+## CI Pipeline
+
+The `jenkinsfile` defines a four-stage Jenkins Pipeline:
+
+| Stage | What it does |
+|-------|--------------|
+| **Checkout** | Confirms workspace and branch, lists files |
+| **SonarQube Analysis** | Runs static analysis and sends results to SonarQube at `localhost:9000` |
+| **Run Dec2Hex** | Executes the script with valid input, no input, and invalid input to verify all code paths |
+| **Unit Tests** | Runs `pytest test_Dec2Hex.py -v` |
+
+The job is triggered automatically via **Poll SCM** every minute (`* * * * *`), so any push to `main` is picked up within a minute.
+
+After a successful run, Jenkins prints a direct link to the SonarQube dashboard for the project.
+
+---
+
+## Docker Stack
+
+The full CI environment runs in Docker Compose with three services:
+
+- **Jenkins** — custom image built from `terraform/jenkins/Dockerfile`, pre-loaded with all required plugins and configured via JCasC (`casc.yaml`). No setup wizard required.
+- **SonarQube** — `sonarqube:community` image, backed by PostgreSQL.
+- **PostgreSQL** — database backend for SonarQube.
+
+Jenkins configuration (users, credentials, SonarQube server URL) is managed entirely by `casc.yaml` — no manual UI setup needed.
+
+---
+
+## Nix Dev Shell
+
+A reproducible development environment is provided via `flake.nix`, which pins Terraform 1.14, AWS CLI v2, and Packer.
+
+```bash
+nix develop
+```
+
+This ensures all contributors use the same tool versions regardless of their local setup.
+
+---
+
+## Coursework Task Status
 
 | Task | Description | Status |
 |------|-------------|--------|
 | Task 1 | EC2 instance, Jenkins, Python, Git installed | ✅ |
-| Task 2 | GitHub repo configured, Dec2Hex.py pushed | ✅ |
-| Task 3 | Jenkins Freestyle job — detect changes, compile, run | ✅ |
+| Task 2 | GitHub repo configured, `Dec2Hex.py` pushed | ✅ |
+| Task 3 | Jenkins job — detects changes, runs app | ✅ |
 | Task 4 | SonarQube static analysis integrated | ✅ |
 | Task 5 | Error handling added to Python project + unit tests | ✅ |
 | Task 6 | All tests passing, SonarQube feedback addressed | ✅ |
+
+---
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
