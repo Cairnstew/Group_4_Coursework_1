@@ -6,6 +6,9 @@ node_modules/
 *.log
 terraform.tfstate
 .terraform/
+terraform.tfstate.backup
+terraform.tfstate
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
