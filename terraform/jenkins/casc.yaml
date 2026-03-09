@@ -34,40 +34,46 @@ unclassified:
 jobs:
   - script: >
       freeStyleJob('my-app') {
-        description('My application freestyle job')
-        scm {
-          git {
-            remote {
-              url('https://github.com/Cairnstew/Group_4_Coursework_1')
-            }
-            branch('*/main')
+          description('My application freestyle job')
+
+          scm {
+              git {
+                  remote {
+                      url('https://github.com/Cairnstew/Group_4_Coursework_1')
+                  }
+                  branch('*/main')
+              }
           }
-        }
-        triggers {
-          scm('* * * * *')
-        }
-        steps {
-          configure { project ->
-            project / builders << 'hudson.plugins.sonar.SonarRunnerBuilder' {
-              project('./sonar-project.properties')
-              properties('')
-              javaOpts('')
-              additionalArguments('')
-            }
+
+          triggers {
+              scm('H/5 * * * *')
           }
-          shell('python3 Dec2Hex.py 255')
-          shell('python3 Dec2Hex.py')
-          shell('python3 Dec2Hex.py hello')
-          shell('python3 -m pytest test_Dec2Hex.py -v || true')
-        }
+
+          steps {
+              sonarRunnerBuilder {
+                  project('./sonar-project.properties')
+              }
+
+              shell('python3 Dec2Hex.py 255')
+              shell('python3 Dec2Hex.py')
+              shell('python3 Dec2Hex.py hello')
+              shell('python3 -m pytest test_Dec2Hex.py -v || true')
+          }
       }
 
 tool:
+  git:
+    installations:
+    - home: "git"
+      name: "Default"
+  mavenGlobalConfig:
+    globalSettingsProvider: "standard"
+    settingsProvider: "standard"
   sonarRunnerInstallation:
     installations:
-      - name: "SonarScanner"
-        properties:
-          - installSource:
-              installers:
-                - sonarRunnerInstaller:
-                    id: "8.0.1.6346"
+    - name: "SonarScanner"
+      properties:
+      - installSource:
+          installers:
+          - sonarRunnerInstaller:
+              id: "8.0.1.6346"
