@@ -1,6 +1,6 @@
 import sys
 
-# Test Change
+# Simulate Change
 
 def decimal_to_hex(decimal_value):
     if decimal_value == 0:
