@@ -1,7 +1,10 @@
 # Script Specific
-.env
 *.pem
-
+.env
+.env.*
+node_modules/
+*.log
+terraform.tfstate
 
 
 # Byte-compiled / optimized / DLL files
