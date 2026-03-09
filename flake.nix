@@ -18,12 +18,18 @@
       devShells = forEachSystem
         (system:
           let
-            pkgs = nixpkgs.legacyPackages.${system};
-            terraform = nixpkgs-terraform.packages.${system}."1.15";
+            pkgs = import nixpkgs {
+              inherit system;
+              config.allowUnfreePredicate = pkg: nixpkgs.lib.elem (nixpkgs.lib.getName pkg) [
+                "packer"
+              ];
+            };
+
+            terraform = nixpkgs-terraform.packages.${system}."1.14";
           in
           {
             default = pkgs.mkShell {
-              buildInputs = [ terraform ];
+              buildInputs = [ terraform pkgs.awscli2 pkgs.packer ];
             };
           });
     };

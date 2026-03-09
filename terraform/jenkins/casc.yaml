@@ -1,0 +1,62 @@
+jenkins:
+  systemMessage: "Jenkins managed by JCasC"
+  numExecutors: 2
+  crumbIssuer:
+    standard:
+      excludeClientIPFromCrumb: false
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "admin"
+          password: "admin"
+  authorizationStrategy:
+    globalMatrix:
+      permissions:
+        - "USER:Overall/Administer:admin"
+        - "GROUP:Overall/Read:authenticated"
+
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          - string:
+              scope: GLOBAL
+              id: "SonarQube"
+              secret: "${SONAR_TOKEN:-}"
+              description: "SonarQube token"
+
+unclassified:
+  sonarGlobalConfiguration:
+    buildWrapperEnabled: true
+    installations:
+      - name: "SonarQube"
+        serverUrl: "http://sonarqube:9000"
+        credentialsId: "SonarQube"
+
+tool:
+  sonarRunnerInstallation:
+    installations:
+      - name: "SonarScanner"
+        properties:
+          - installSource:
+              installers:
+                - sonarRunnerInstaller:
+                    id: "8.0.1.6346"
+
+jobs:
+  - script: >
+      freeStyleJob('my-app') {
+        description('My application freestyle job')
+        scm {
+          git {
+            remote {
+              url('https://github.com/Cairnstew/Group_4_Coursework_1')
+            }
+            branch('*/main')
+          }
+        }
+        steps {
+          shell('python3 Dec2Hex.py')
+        }
+      }

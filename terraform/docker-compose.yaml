@@ -1,0 +1,66 @@
+services:
+  jenkins:
+    build:
+      context: ./jenkins
+      dockerfile: Dockerfile
+    container_name: jenkins
+    restart: unless-stopped
+    user: "1000:1000"
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    environment:
+      CASC_JENKINS_CONFIG: /var/jenkins_home/casc.yaml
+      SONAR_TOKEN: ${SONAR_TOKEN}
+      JAVA_OPTS: "-Djenkins.install.runSetupWizard=false"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - ./jenkins/plugins.txt:/usr/share/jenkins/ref/plugins.txt
+      - ./jenkins/casc.yaml:/var/jenkins_home/casc.yaml
+    networks:
+      - devops
+
+  sonarqube:
+    image: sonarqube:community
+    container_name: sonarqube
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+    environment:
+      SONAR_JDBC_URL: jdbc:postgresql://sonarqube_db:5432/sonar
+      SONAR_JDBC_USERNAME: sonar
+      SONAR_JDBC_PASSWORD: sonar
+      JAVA_TOOL_OPTIONS: '-Djava.net.preferIPv6Addresses=true'
+      SONAR_WEB_JAVAADDITIONALOPTS: '-Djava.net.preferIPv6Addresses=true'
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_logs:/opt/sonarqube/logs
+      - sonarqube_extensions:/opt/sonarqube/extensions
+    depends_on:
+      - sonarqube_db
+    networks:
+      - devops
+
+  sonarqube_db:
+    image: postgres:15
+    container_name: sonarqube_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sonar
+      POSTGRES_PASSWORD: sonar
+      POSTGRES_DB: sonar
+    volumes:
+      - sonarqube_db_data:/var/lib/postgresql/data
+    networks:
+      - devops
+
+volumes:
+  jenkins_home:
+  sonarqube_data:
+  sonarqube_logs:
+  sonarqube_extensions:
+  sonarqube_db_data:
+
+networks:
+  devops:
+    driver: bridge
