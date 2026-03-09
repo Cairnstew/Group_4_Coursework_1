@@ -1,9 +1,7 @@
+# jenkins/casc.yaml
 jenkins:
   systemMessage: "Jenkins managed by JCasC"
   numExecutors: 2
-  crumbIssuer:
-    standard:
-      excludeClientIPFromCrumb: false
   securityRealm:
     local:
       allowsSignup: false
@@ -23,7 +21,7 @@ credentials:
           - string:
               scope: GLOBAL
               id: "SonarQube"
-              secret: "${SONAR_TOKEN:-}"
+              secret: "${SONAR_TOKEN}"
               description: "SonarQube token"
 
 unclassified:
@@ -33,17 +31,6 @@ unclassified:
       - name: "SonarQube"
         serverUrl: "http://sonarqube:9000"
         credentialsId: "SonarQube"
-
-tool:
-  sonarRunnerInstallation:
-    installations:
-      - name: "SonarScanner"
-        properties:
-          - installSource:
-              installers:
-                - sonarRunnerInstaller:
-                    id: "8.0.1.6346"
-
 jobs:
   - script: >
       freeStyleJob('my-app') {
@@ -56,7 +43,31 @@ jobs:
             branch('*/main')
           }
         }
+        triggers {
+          scm('* * * * *')
+        }
         steps {
+          configure { project ->
+            project / builders << 'hudson.plugins.sonar.SonarRunnerBuilder' {
+              project('./sonar-project.properties')
+              properties('')
+              javaOpts('')
+              additionalArguments('')
+            }
+          }
+          shell('python3 Dec2Hex.py 255')
           shell('python3 Dec2Hex.py')
+          shell('python3 Dec2Hex.py hello')
+          shell('python3 -m pytest test_Dec2Hex.py -v || true')
         }
       }
+
+tool:
+  sonarRunnerInstallation:
+    installations:
+      - name: "SonarScanner"
+        properties:
+          - installSource:
+              installers:
+                - sonarRunnerInstaller:
+                    id: "8.0.1.6346"
