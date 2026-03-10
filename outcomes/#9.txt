@@ -1,0 +1,169 @@
+Started by user admin
+Running as SYSTEM
+Building in workspace /var/jenkins_home/workspace/my-app
+The recommended git tool is: NONE
+No credentials specified
+ > git rev-parse --resolve-git-dir /var/jenkins_home/workspace/my-app/.git # timeout=10
+Fetching changes from the remote Git repository
+ > git config remote.origin.url https://github.com/Cairnstew/Group_4_Coursework_1 # timeout=10
+Fetching upstream changes from https://github.com/Cairnstew/Group_4_Coursework_1
+ > git --version # timeout=10
+ > git --version # 'git version 2.47.3'
+ > git fetch --tags --force --progress -- https://github.com/Cairnstew/Group_4_Coursework_1 +refs/heads/*:refs/remotes/origin/* # timeout=10
+ > git rev-parse refs/remotes/origin/main^{commit} # timeout=10
+Checking out Revision 1265705d01f33e229206024022a6129c1703d489 (refs/remotes/origin/main)
+ > git config core.sparsecheckout # timeout=10
+ > git checkout -f 1265705d01f33e229206024022a6129c1703d489 # timeout=10
+Commit message: "feat(python): Update Dec2Hex.py fix"
+ > git rev-list --no-walk c20661cae01343c81c50012d78f63c860fee6cbc # timeout=10
+[my-app] $ /var/jenkins_home/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarScanner/bin/sonar-scanner -Dsonar.host.url=http://sonarqube:9000 ******** -Dproject.settings=/var/jenkins_home/workspace/my-app/sonar-project.properties -Dsonar.projectBaseDir=/var/jenkins_home/workspace/my-app
+17:14:45.371 INFO  Scanner configuration file: /var/jenkins_home/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarScanner/conf/sonar-scanner.properties
+17:14:45.378 INFO  Project root configuration file: /var/jenkins_home/workspace/my-app/sonar-project.properties
+17:14:45.411 INFO  SonarScanner CLI 8.0.1.6346
+17:14:45.417 INFO  Linux 6.17.0-1007-aws amd64
+17:14:49.742 INFO  Communicating with SonarQube Community Build 26.3.0.120487
+17:14:49.745 INFO  JRE provisioning: os[linux], arch[x86_64]
+17:14:50.427 INFO  Starting SonarScanner Engine...
+17:14:50.429 INFO  Java 21.0.9 Eclipse Adoptium (64-bit)
+17:14:55.682 INFO  Load global settings
+17:14:55.880 INFO  Load global settings (done) | time=198ms
+17:14:55.884 INFO  Server id: 9077047E-AZzTqzZuVac7_aZsOeeU
+17:14:55.901 INFO  Loading required plugins
+17:14:55.901 INFO  Load plugins index
+17:14:55.929 INFO  Load plugins index (done) | time=29ms
+17:14:55.929 INFO  Load/download plugins
+17:14:55.991 INFO  Load/download plugins (done) | time=61ms
+17:14:56.578 INFO  Process project properties
+17:14:56.611 INFO  Process project properties (done) | time=37ms
+17:14:56.646 INFO  Project key: group4-dec2hex
+17:14:56.648 INFO  Base dir: /var/jenkins_home/workspace/my-app
+17:14:56.648 INFO  Working dir: /var/jenkins_home/workspace/my-app/.scannerwork
+17:14:56.679 INFO  Load project settings for component key: 'group4-dec2hex'
+17:14:56.700 INFO  Load project settings for component key: 'group4-dec2hex' (done) | time=31ms
+17:14:56.743 INFO  Load quality profiles
+17:14:56.814 INFO  Load quality profiles (done) | time=68ms
+17:14:56.895 INFO  Load active rules
+17:14:57.545 INFO  Load active rules (done) | time=651ms
+17:14:57.554 INFO  Load analysis cache
+17:14:57.600 INFO  Load analysis cache (2.0 kB) | time=47ms
+17:14:57.866 INFO  Preprocessing files...
+17:14:57.989 INFO  4 languages detected in 19 preprocessed files (done) | time=121ms
+17:14:57.991 INFO  55 files ignored because of scm ignore settings
+17:14:57.992 INFO  Loading plugins for detected languages
+17:14:57.992 INFO  Load/download plugins
+17:14:58.003 INFO  Load/download plugins (done) | time=10ms
+17:14:58.345 INFO  Load project repositories
+17:14:58.487 INFO  Load project repositories (done) | time=141ms
+17:14:58.527 INFO  Indexing files...
+17:14:58.531 INFO  Project configuration:
+17:14:58.550 INFO  19 files indexed (done) | time=22ms
+17:14:58.551 INFO  Quality profile for docker: Sonar way
+17:14:58.552 INFO  Quality profile for py: Sonar way
+17:14:58.552 INFO  Quality profile for terraform: Sonar way
+17:14:58.552 INFO  Quality profile for yaml: Sonar way
+17:14:58.552 INFO  ------------- Run sensors on module Group4 Dec2Hex
+17:14:58.628 INFO  Load metrics repository
+17:14:58.663 INFO  Load metrics repository (done) | time=36ms
+17:14:59.603 INFO  Sensor IaC Terraform Sensor [iac]
+17:14:59.717 INFO  2 source files to be analyzed
+17:14:59.903 INFO  2/2 source files have been analyzed
+17:14:59.904 INFO  Sensor IaC Terraform Sensor [iac] (done) | time=299ms
+17:14:59.906 INFO  Sensor IaC TFLint report Sensor [iac]
+17:14:59.907 INFO  Sensor IaC TFLint report Sensor [iac] (done) | time=1ms
+17:14:59.907 INFO  Sensor IaC CloudFormation Sensor [iac]
+17:14:59.913 INFO  There are no files to be analyzed for the CloudFormation language
+17:14:59.913 INFO  Sensor IaC CloudFormation Sensor [iac] (done) | time=9ms
+17:14:59.913 INFO  Sensor IaC cfn-lint report Sensor [iac]
+17:14:59.913 INFO  Sensor IaC cfn-lint report Sensor [iac] (done) | time=0ms
+17:14:59.913 INFO  Sensor IaC Kustomization Sensor [iac]
+17:14:59.913 INFO  Sensor IaC Kustomization Sensor [iac] (done) | time=1ms
+17:14:59.913 INFO  Sensor IaC hadolint report Sensor [iac]
+17:14:59.914 INFO  Sensor IaC hadolint report Sensor [iac] (done) | time=0ms
+17:14:59.914 INFO  Sensor Java Config Sensor [iac]
+17:14:59.918 INFO  There are no files to be analyzed for the Java language
+17:14:59.920 INFO  Sensor Java Config Sensor [iac] (done) | time=6ms
+17:14:59.920 INFO  Sensor IaC Docker Sensor [iac]
+17:14:59.965 INFO  1 source file to be analyzed
+17:15:00.032 INFO  1/1 source file has been analyzed
+17:15:00.033 INFO  Sensor IaC Docker Sensor [iac] (done) | time=113ms
+17:15:00.033 INFO  Sensor Python Sensor [python]
+17:15:00.039 WARN  Your code is analyzed as compatible with all Python 3 versions by default. You can get a more precise analysis by setting the exact Python version in your configuration via the parameter "sonar.python.version"
+17:15:00.472 INFO  Starting global symbols computation
+17:15:00.472 INFO  2 source files to be analyzed
+17:15:00.763 INFO  2/2 source files have been analyzed
+17:15:00.764 INFO  Finished step global symbols computation in 293ms
+17:15:00.790 INFO  Starting rules execution
+17:15:00.792 INFO  2 source files to be analyzed
+17:15:01.897 INFO  2/2 source files have been analyzed
+17:15:01.901 INFO  Finished step rules execution in 1107ms
+17:15:01.902 INFO  The Python analyzer was able to leverage cached data from previous analyses for 0 out of 2 files. These files were not parsed.
+17:15:01.903 INFO  Sensor Python Sensor [python] (done) | time=1872ms
+17:15:01.904 INFO  Sensor Cobertura Sensor for Python coverage [python]
+17:15:01.910 INFO  Sensor Cobertura Sensor for Python coverage [python] (done) | time=6ms
+17:15:01.915 INFO  Sensor PythonXUnitSensor [python]
+17:15:01.922 INFO  Sensor PythonXUnitSensor [python] (done) | time=6ms
+17:15:01.924 INFO  Sensor Python Dependency Sensor [python]
+17:15:01.936 INFO  Sensor Python Dependency Sensor [python] (done) | time=12ms
+17:15:01.937 INFO  Sensor JavaScript inside YAML analysis [javascript]
+17:15:01.954 INFO  No input files found for analysis
+17:15:01.954 INFO  Hit the cache for 0 out of 0
+17:15:01.954 INFO  Miss the cache for 0 out of 0
+17:15:01.954 INFO  Sensor JavaScript inside YAML analysis [javascript] (done) | time=17ms
+17:15:01.958 INFO  Sensor CSS Rules [javascript]
+17:15:01.958 INFO  No CSS, PHP, HTML or VueJS files are found in the project. CSS analysis is skipped.
+17:15:01.959 INFO  Sensor CSS Rules [javascript] (done) | time=0ms
+17:15:01.961 INFO  Sensor IaC Kubernetes Sensor [iac]
+17:15:02.057 INFO  There are no files to be analyzed for the Kubernetes language
+17:15:02.058 INFO  Sensor IaC Kubernetes Sensor [iac] (done) | time=101ms
+17:15:02.060 INFO  Sensor TextAndSecretsSensor [text]
+17:15:02.098 INFO  Available processors: 2
+17:15:02.099 INFO  Using 2 threads for analysis.
+17:15:02.597 INFO  The property "sonar.tests" is not set. To improve the analysis accuracy, we categorize a file as a test file if any of the following is true:
+  * The filename starts with "test"
+  * The filename contains "test." or "tests."
+  * Any directory in the file path is named: "doc", "docs", "test", "tests", "mock" or "mocks"
+  * Any directory in the file path has a name ending in "test" or "tests"
+
+17:15:02.632 INFO  Start fetching files for the text and secrets analysis
+17:15:02.646 INFO  Using Git CLI to retrieve dirty files
+17:15:02.654 INFO  Retrieving language associated files and files included via "sonar.text.inclusions" that are tracked by git
+17:15:02.656 INFO  Starting the text and secrets analysis
+17:15:02.664 INFO  13 source files to be analyzed for the text and secrets analysis
+17:15:02.720 INFO  13/13 source files have been analyzed for the text and secrets analysis
+17:15:02.725 INFO  Sensor TextAndSecretsSensor [text] (done) | time=664ms
+17:15:02.733 INFO  ------------- Run sensors on project
+17:15:03.008 INFO  Sensor Zero Coverage Sensor
+17:15:03.022 INFO  Sensor Zero Coverage Sensor (done) | time=15ms
+17:15:03.023 INFO  ------------- Gather SCA dependencies on project
+17:15:03.028 INFO  Dependency analysis skipped
+17:15:03.039 INFO  SCM Publisher SCM provider for this project is: git
+17:15:03.042 INFO  SCM Publisher 1 source file to be analyzed
+17:15:03.221 INFO  SCM Publisher 1/1 source file have been analyzed (done) | time=179ms
+17:15:03.224 INFO  CPD Executor Calculating CPD for 2 files
+17:15:03.235 INFO  CPD Executor CPD calculation finished (done) | time=10ms
+17:15:03.243 INFO  SCM revision ID '1265705d01f33e229206024022a6129c1703d489'
+17:15:03.374 INFO  Analysis report generated in 124ms, dir size=276.7 kB
+17:15:03.422 INFO  Analysis report compressed in 48ms, zip size=38.8 kB
+17:15:03.469 INFO  Analysis report uploaded in 46ms
+17:15:03.473 INFO  ANALYSIS SUCCESSFUL, you can find the results at: http://sonarqube:9000/dashboard?id=group4-dec2hex
+17:15:03.473 INFO  Note that you will be able to access the updated dashboard once the server has processed the submitted analysis report
+17:15:03.473 INFO  More about the report processing at http://sonarqube:9000/api/ce/task?id=5f6ff5e9-ed49-4b43-839d-7a95faa26d43
+17:15:03.485 INFO  Analysis total time: 7.414 s
+17:15:03.493 INFO  SonarScanner Engine completed successfully
+17:15:03.863 INFO  EXECUTION SUCCESS
+17:15:03.864 INFO  Total time: 18.498s
+[my-app] $ /bin/sh -xe /tmp/jenkins8901920655741931839.sh
++ python3 Dec2Hex.py 255
+Converting the Decimal Value 255 to Hex...
+Hexadecimal representation is: FF
+[my-app] $ /bin/sh -xe /tmp/jenkins7839321008469489280.sh
++ python3 Dec2Hex.py
+Usage: python script.py <decimal_number>
+[my-app] $ /bin/sh -xe /tmp/jenkins1614326937879846463.sh
++ python3 Dec2Hex.py hello
+Please provide a valid integer.
+[my-app] $ /bin/sh -xe /tmp/jenkins17923806074129115054.sh
++ python3 -m pytest test_Dec2Hex.py -v
+/usr/bin/python3: No module named pytest
++ true
+Finished: SUCCESS
